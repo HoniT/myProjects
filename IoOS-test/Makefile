@@ -21,17 +21,17 @@ ASM = nasm
 OBJCOPY = i686-elf-objcopy
 
 CXX = i686-elf-g++
-CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -fno-exceptions -fno-rtti
+CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -mgeneral-regs-only -fno-exceptions -fno-rtti
 
 ELF_LD = i686-elf-ld
-ELF_LD_FLAGS = -g -relocatable
+ELF_LD_FLAGS =
 
 GCC = i686-elf-gcc
-GCC_FLAGS = -g -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
+GCC_LINK_FLAGS = -nostdlib -nostartfiles -nodefaultlibs -Wl,--build-id=none
 
 # Output files
-OS_BIN = $(BIN)/os.bin # Linked ELF file
-OS_ELF = $(BIN)/os.elf # Linked binary file
+OS_BIN = $(BIN)/os.bin # Combined binary file
+OS_ELF = $(BIN)/os.elf # Combined ELF file
 DISK_IMG = $(BIN)/disk.img # Disk Image
 
 BOOT_OBJ = $(BUILD)/boot.o
@@ -50,7 +50,7 @@ all:
 	$(CXX) -I./src $(CXX_FLAGS) -std=c++23 -c $(KERNEL_DIR)/drivers_src/print_src/print.cpp -o $(PRINT_OBJ)
 
 # Link all object files (bootloader + kernel) into an ELF file and binary file
-	$(GCC) $(GCC_FLAGS) -T tools/linker.ld -o $(OS_ELF) -ffreestanding -nostdlib \
+	$(GCC) $(GCC_LINK_FLAGS) -T tools/linker.ld -o $(OS_ELF) \
 		$(BOOT_OBJ) $(KERNEL_JUMP_OBJ) $(KERNEL_OBJ) $(PRINT_OBJ)
 	$(OBJCOPY) -O binary $(OS_ELF) $(OS_BIN)
 
