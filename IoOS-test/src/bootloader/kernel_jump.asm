@@ -9,7 +9,7 @@
 
 [BITS 32] ; We are in protected mode
 
-global _start 
+global _start
 
 extern kernel_main ; External symbol of kernel_main.cpp
 
@@ -17,6 +17,6 @@ _start:
 
     call kernel_main ; Connecting to kernel_main.cpp (void kernel_main())
 
-    jmp $ ; Infinite loop
-    
-times 512 - ($ - $$) db 0 ; Filling remainder of 512 bytes with 0
+hltloop:
+    hlt
+    jmp hltloop      ; Infinite loop
