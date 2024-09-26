@@ -21,7 +21,8 @@ ASM = nasm
 OBJCOPY = i686-elf-objcopy
 
 CXX = i686-elf-g++
-CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -mgeneral-regs-only -fno-exceptions -fno-rtti -fno-pic
+CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -mgeneral-regs-only \
+           -fno-exceptions -fno-rtti -fno-pic -fno-asynchronous-unwind-tables
 
 ELF_LD = i686-elf-ld
 ELF_LD_FLAGS =
