@@ -92,7 +92,7 @@ extern "C" void print_char(char character) {
 
 
 // Printing string to the screen
-extern "C" void print_str(char* str) {
+extern "C" void print_str(const char* str) {
     // Calling the print_char function the same amount of times as the strings length
     for(size_t i = 0; str[i] != '\0'; ++i) {
         print_char(str[i]);

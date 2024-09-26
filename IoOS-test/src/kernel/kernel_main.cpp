@@ -10,7 +10,7 @@
 
 extern "C" void kernel_main() {
 
-    
+    print_str("Hello There!\nHelp me\n");
 
 
     // Infinite loop
