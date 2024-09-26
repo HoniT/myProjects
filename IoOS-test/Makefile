@@ -21,13 +21,13 @@ ASM = nasm
 OBJCOPY = i686-elf-objcopy
 
 CXX = i686-elf-g++
-CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -mgeneral-regs-only -fno-exceptions -fno-rtti
+CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -mgeneral-regs-only -fno-exceptions -fno-rtti -fno-pic
 
 ELF_LD = i686-elf-ld
 ELF_LD_FLAGS =
 
 GCC = i686-elf-gcc
-GCC_LINK_FLAGS = -nostdlib -nostartfiles -nodefaultlibs -Wl,--build-id=none
+GCC_LINK_FLAGS = -nostdlib -nostartfiles -nodefaultlibs -no-pie -Wl,--build-id=none
 
 # Output files
 OS_BIN = $(BIN)/os.bin # Combined binary file
