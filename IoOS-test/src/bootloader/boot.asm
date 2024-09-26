@@ -12,19 +12,26 @@
 ; Variables- Addresses and Offsets
 ; =============================================
 
+extern _start
+extern __kernel_sectors
+
 ; GDT segments
 CODE_SEG_OFFSET equ gdt_code_seg - gdt_start
 DATA_SEG_OFFSET equ gdt_data_seg - gdt_start
 VGA_SEG_OFFSET equ gdt_vga_seg - gdt_start 
 
 ; Kernel locations
-KERNEL_LOAD_SEG equ 0x1000           ; Where the kernel will be loaded initially
-KERNEL_START_ADDRESS equ 0x100000    ; Kernel's final memory address (1 MiB)
+KERNEL_LOAD_SEG    equ 0x1000           ; Where the kernel will be loaded initially @ 0x10000
+KERNEL_LOAD_OFFSET equ 0x0000           ; Where the kernel will be loaded initially
+KERNEL_LOAD_ADDR   equ ((KERNEL_LOAD_SEG << 4) + KERNEL_LOAD_OFFSET)
 
+KERNEL_START_ADDRESS equ 0x100000    ; Kernel's final memory address (1 MiB)
 
 ; =============================================
 ; Start- Real Mode
 ; =============================================
+
+section .boot
 
 start:
     cli ; Disabling interrupts
@@ -50,18 +57,21 @@ start:
     call enable_a20
 
     ; Load GDT
-    lgdt [gdt_descriptor] 
+    lgdt [gdt_descriptor]
 
 
     ; Loading kernel using CHS
-    mov bx, KERNEL_LOAD_SEG     ; Segment where kernel is loaded
+    mov bx, KERNEL_LOAD_OFFSET  ; Offset where kernel is loaded
+    push KERNEL_LOAD_SEG        ; Segment where kernel is loaded
+    pop es                      ; ES:BX=01000:0x0000 = phys address 0x10000
 
     xor dh, dh                  ; Head 0 (same as mov dh, 0)
-    mov dl, 0x80                ; First hard disk (0x80)
+    ; Use DL value passed by BIOS to our bootloader
+;    mov dl, 0x80
     mov cl, 0x02                ; Start reading from sector 2
     xor ch, ch                  ; Cylinder 0
     mov ah, 0x02                ; Function to read sectors
-    mov al, 8                   ; Number of sectors to read (adjust if necessary)
+    mov al, __kernel_sectors    ; Number of sectors to read
 
     int 0x13                    ; BIOS interrupt to read sectors
 
@@ -86,6 +96,7 @@ start:
 ; =============================================
 
 enable_a20:
+    push dx                  ; Save DX
 
     ; Wait for keyboard controller to be ready
     mov dx, 0x64
@@ -100,10 +111,12 @@ enable_a20:
     call wait_kbd_ready
 
     ; Write to output port to enable A20
-    mov al, 0xDF                ; Enable A20 by clearing bit 1
+    mov al, 0xDF             ; Enable A20 by clearing bit 1
     mov dx, 0x60
     out dx, al
     call wait_kbd_ready
+
+    pop dx                  ; Restore DX
 
     ret
 
@@ -209,19 +222,22 @@ protected_mode_init:
 
     ; Relocate the kernel to its final address (1 MiB)
     extern __kernel_start
-    extern __kernel_end
+    extern __kernel_load_end
+    extern __kernel_load_sizeb
 
-    mov esi, KERNEL_LOAD_SEG       ; Source address
+    mov esi, KERNEL_LOAD_ADDR      ; Source address
     mov edi, KERNEL_START_ADDRESS  ; Destination address (1 MiB)
-
-    ; Calculate the size of the kernel
-    mov eax, __kernel_end
-    sub eax, __kernel_start        ; Calculate size (__kernel_end - __kernel_start)
-    mov ecx, eax                   ; Set size in ECX for copying
-
+    mov ecx, __kernel_load_sizeb   ; Set size in ECX for copying
     rep movsb                      ; Copy kernel to final address (EDI)
 
+    ; Zero out the BSS memory
+    extern __kernel_bss_start
+    extern __kernel_bss_sizeb
 
+    xor eax, eax                   ; AL = 0 (value to zero memory with)
+    mov edi, __kernel_bss_start    ; Source address
+    mov ecx, __kernel_bss_sizeb    ; Set size in ECX for copying
+    rep stosb                      ; Zero fill the BBS memory
 
 
     ; Set VGA segment descriptor to access VGA memory at 0xB8000
@@ -229,10 +245,4 @@ protected_mode_init:
     mov es, ax
 
     ; Far jump to the kernel's entry point
-    jmp CODE_SEG_OFFSET:KERNEL_START_ADDRESS
-
-
-
-; Filling remainder of space with zeros
-times 510 - ($ - $$) db 0
-dw 0xAA55                           ; Boot signature
+    jmp CODE_SEG_OFFSET:_start

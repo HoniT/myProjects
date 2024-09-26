@@ -18,6 +18,7 @@ INCLUDE = -I src/include
 
 # Tools
 ASM = nasm
+OBJCOPY = i686-elf-objcopy
 
 CXX = i686-elf-g++
 CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -fno-exceptions -fno-rtti
@@ -25,16 +26,17 @@ CXX_FLAGS = $(INCLUDE) -g -Wall -O2 -ffreestanding -fno-exceptions -fno-rtti
 ELF_LD = i686-elf-ld
 ELF_LD_FLAGS = -g -relocatable
 
-GCC = i686-elf-gcc 
+GCC = i686-elf-gcc
 GCC_FLAGS = -g -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 # Output files
-OS_BIN = $(BIN)/os.bin # Linked binary file
+OS_BIN = $(BIN)/os.bin # Linked ELF file
+OS_ELF = $(BIN)/os.elf # Linked binary file
+DISK_IMG = $(BIN)/disk.img # Disk Image
 
 BOOT_OBJ = $(BUILD)/boot.o
 KERNEL_JUMP_OBJ = $(BUILD)/kernel_jump.o
-KERNEL_OBJ = $(BUILD)/kernel_main.o 
-LINKED_OBJ = $(BUILD)/linkedKernel.o
+KERNEL_OBJ = $(BUILD)/kernel_main.o
 PRINT_OBJ = $(BUILD)/print.o
 
 all:
@@ -47,12 +49,14 @@ all:
 	$(CXX) -I./src $(CXX_FLAGS) -std=c++23 -c $(KERNEL_DIR)/kernel_main.cpp -o $(KERNEL_OBJ)
 	$(CXX) -I./src $(CXX_FLAGS) -std=c++23 -c $(KERNEL_DIR)/drivers_src/print_src/print.cpp -o $(PRINT_OBJ)
 
-# Merging kernel_jump.o with kernel_main.o
-	$(ELF_LD) $(ELF_LD_FLAGS) $(KERNEL_JUMP_OBJ) $(KERNEL_OBJ) $(PRINT_OBJ) -o $(LINKED_OBJ)
+# Link all object files (bootloader + kernel) into an ELF file and binary file
+	$(GCC) $(GCC_FLAGS) -T tools/linker.ld -o $(OS_ELF) -ffreestanding -nostdlib \
+		$(BOOT_OBJ) $(KERNEL_JUMP_OBJ) $(KERNEL_OBJ) $(PRINT_OBJ)
+	$(OBJCOPY) -O binary $(OS_ELF) $(OS_BIN)
 
-# Link all object files (bootloader + kernel) into a single binary
-	$(GCC) $(GCC_FLAGS) -T tools/linker.ld -o $(OS_BIN) -ffreestanding -O0 -nostdlib $(BOOT_OBJ) $(LINKED_OBJ)
-
+# Create 10MiB disk image
+	dd if=/dev/zero of=$(DISK_IMG) bs=1M count=10
+	dd if=$(OS_BIN) of=$(DISK_IMG) seek=0 conv=notrunc
 
 # Cleaning the build
 clean:
